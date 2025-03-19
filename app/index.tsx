@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { StyleSheet, FlatList, KeyboardAvoidingView, Platform } from "react-native"
+import { StyleSheet, FlatList, KeyboardAvoidingView, Platform, View } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated"
 import { ThemedView } from "@/components/ThemedView"
@@ -9,31 +9,55 @@ import { ChatInput } from "@/components/ChatInput"
 import { MessageBubble } from "@/components/MessageBubble"
 import { TypingIndicator } from "@/components/TypingIndicator"
 import { GradientHeader } from "@/components/GradientHeader"
-import { getChatResponse } from "@/utils/chatService"
+import { getChatResponse, loadChatHistory, getChatHistoryMessages, type ChatMessage } from "@/utils/chatService"
 
 // Initial messages to show in the chat
-const initialMessages = [{ id: "1", text: "Hello, how can I help you today?", sender: "bot", timestamp: new Date() }]
+const initialMessages: ChatMessage[] = [
+  { id: "1", text: "Hello, how can I help you today?", sender: "bot", timestamp: new Date() },
+]
 
 export default function ChatScreen() {
-  const [messages, setMessages] = useState(initialMessages)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputText, setInputText] = useState("")
   const [isTyping, setIsTyping] = useState(false)
-  const flatListRef = useRef(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const flatListRef = useRef<FlatList<ChatMessage>>(null)
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (flatListRef.current && messages.length > 0) {
       setTimeout(() => {
-        flatListRef.current.scrollToEnd({ animated: true })
+        flatListRef.current?.scrollToEnd({ animated: true })
       }, 100)
     }
   }, [messages])
 
-  const handleSendMessage = async (text) => {
+  useEffect(() => {
+    async function fetchChatHistory() {
+      try {
+        setIsLoading(true)
+        await loadChatHistory()
+        const historyMessages = getChatHistoryMessages()
+        console.log(historyMessages)
+        // Set messages directly from history, don't append
+        setMessages(historyMessages)
+      } catch (error) {
+        console.error("Error loading chat history:", error)
+        // Fallback to initial greeting if loading fails
+        setMessages(initialMessages)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchChatHistory()
+  }, [])
+
+  const handleSendMessage = async (text: string) => {
     if (!text.trim()) return
 
     // Add user message to the chat
-    const userMessage = {
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
       text: text,
       sender: "user",
@@ -48,8 +72,9 @@ export default function ChatScreen() {
       // Get response from AI
       const response = await getChatResponse(text)
 
-      // Add bot response to the chat
-      const botMessage = {
+      // Add bot response to the chat - the response is already added to chat history
+      // in getChatResponse, so we just need to update our local state
+      const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         text: response,
         sender: "bot",
@@ -61,7 +86,7 @@ export default function ChatScreen() {
       console.error("Error getting chat response:", error)
 
       // Add error message
-      const errorMessage = {
+      const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         text: "Sorry, I encountered an error. Please try again.",
         sender: "bot",
@@ -75,7 +100,7 @@ export default function ChatScreen() {
     }
   }
 
-  const renderMessage = ({ item, index }) => (
+  const renderMessage = ({ item }: { item: ChatMessage }) => (
     <Animated.View
       entering={item.sender === "user" ? FadeInUp.delay(100) : FadeInDown.delay(100)}
       style={styles.messageContainer}
@@ -89,19 +114,27 @@ export default function ChatScreen() {
       <GradientHeader title="AI Assistant" />
 
       <LinearGradient colors={["#121212", "#1a1a1a"]} style={styles.chatContainer}>
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.messagesList}
-          showsVerticalScrollIndicator={false}
-        />
-
-        {isTyping && (
-          <Animated.View entering={FadeInUp} style={styles.typingContainer}>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
             <TypingIndicator />
-          </Animated.View>
+          </View>
+        ) : (
+          <>
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              renderItem={renderMessage}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.messagesList}
+              showsVerticalScrollIndicator={false}
+            />
+
+            {isTyping && (
+              <Animated.View entering={FadeInUp} style={styles.typingContainer}>
+                <TypingIndicator />
+              </Animated.View>
+            )}
+          </>
         )}
       </LinearGradient>
 
@@ -142,6 +175,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#0a0a0a",
     borderTopWidth: 1,
     borderTopColor: "#222",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 100,
   },
 })
 

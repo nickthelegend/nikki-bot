@@ -20,7 +20,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const formattedTime = formatTime(message.timestamp)
 
   // Choose gradient colors based on sender and error state
-  const gradientColors = isUser ? ["#333", "#444"] : message.isError ? ["#3a1a1a", "#4a2a2a"] : ["#1a1a1a", "#2a2a2a"]
+  const gradientColors: [string, string] = isUser
+    ? ["#333", "#444"]
+    : message.isError
+      ? ["#3a1a1a", "#4a2a2a"]
+      : ["#1a1a1a", "#2a2a2a"]
 
   return (
     <View style={[styles.container, isUser ? styles.userContainer : styles.botContainer]}>
