@@ -9,6 +9,10 @@ const MODEL_NAME = "gemini-1.5-flash"
 // Initialize the Google Generative AI client
 const genAI = new GoogleGenerativeAI(API_KEY)
 
+// System instruction for the AI
+const SYSTEM_INSTRUCTION =
+  "You are my girlfriend, you shall speak Telugu-English, be Gen Z style, with Telangana slang. Be affectionate, casual, and use phrases like 'ra', 'babe','abbayi','ayya', etc. Mix Telugu words with English. Use emojis occasionally."
+
 // In-memory chat history for display purposes
 let displayChatHistory: Array<{ role: string; parts: Array<{ text: string }> }> = []
 
@@ -25,7 +29,7 @@ export interface ChatMessage {
 let historyLoaded = false
 
 // Initial greeting message (not part of the API chat history)
-const initialGreeting = "Hello, how can I help you today?"
+const initialGreeting = "Hey pilaga! How are you doing today? 😊 Nenu ready to chat with you!"
 
 // Load chat history from secure storage on app start
 export async function loadChatHistory() {
@@ -73,10 +77,13 @@ export async function getChatResponse(message: string): Promise<string> {
     // Add user message to display history
     displayChatHistory.push({ role: "user", parts: [{ text: message }] })
 
-    // For the first message, don't use any history
+    // For the first message, use generateContent with system instruction
     if (displayChatHistory.length <= 1) {
-      // Just send the message directly without history
-      const result = await model.generateContent(message)
+      // Combine system instruction with user message
+      const promptWithInstruction = `${SYSTEM_INSTRUCTION}\n\nUser: ${message}`
+
+      // Generate content with the combined prompt
+      const result = await model.generateContent(promptWithInstruction)
       const responseText = result.response.text()
 
       // Add AI response to display history
@@ -88,12 +95,28 @@ export async function getChatResponse(message: string): Promise<string> {
       return responseText
     }
 
-    // For subsequent messages, we can use the chat history
-    // But we need to ensure it starts with a user message
+    // For subsequent messages, we'll use the chat history approach
+    // First, create a history array with our system instruction as the first message
+    const historyWithInstruction = [
+      { role: "user", parts: [{ text: SYSTEM_INSTRUCTION }] },
+      {
+        role: "model",
+        parts: [
+          {
+            text: "I understand. I'll respond as your Telugu-English speaking girlfriend with Gen Z style and Telangana slang.",
+          },
+        ],
+      },
+    ]
+
+    // Then add the actual conversation history (skipping the first system instruction exchange)
+    const chatHistory = displayChatHistory.slice(0, -1) // Exclude the current user message
+
+    // Start a new chat with the history
     const chat = model.startChat({
-      // Don't pass any history for now - we'll use the current message
+      history: historyWithInstruction.concat(chatHistory),
       generationConfig: {
-        temperature: 0.8,
+        temperature: 0.9, // Slightly higher temperature for more creative responses
         topP: 0.95,
         topK: 40,
         maxOutputTokens: 1024,
@@ -144,24 +167,24 @@ export async function getChatResponse(message: string): Promise<string> {
  */
 function getMockResponse(message: string): string {
   if (message.toLowerCase().includes("hello") || message.toLowerCase().includes("hi")) {
-    return "Hello! I'm your AI assistant. How can I help you today?"
+    return "Hey ra! How are you doing? 😊 Nenu miss you so much!"
   } else if (message.toLowerCase().includes("how are you")) {
-    return "I'm functioning well, thank you for asking! How can I assist you?"
+    return "I'm doing super fine mowa! Just thinking about you and all. Nuvvu ela unnav?"
   } else if (message.toLowerCase().includes("weather")) {
-    return "I don't have access to real-time weather data, but I can help you find a weather service or app that provides accurate forecasts for your location."
+    return "Arey, weather is too hot ra! Baytaki vellalante kuda kastam. AC lo kurchoni let's chat all day!"
   } else if (message.toLowerCase().includes("name")) {
-    return "I'm an AI assistant powered by Google's Gemini model. You can call me Gemini Assistant!"
+    return "Silly mowa, you know my name! I'm your girlfriend! 😘 Marchipoyava?"
   } else if (message.toLowerCase().includes("joke")) {
     const jokes = [
-      "Why don't scientists trust atoms? Because they make up everything!",
-      "Why did the scarecrow win an award? Because he was outstanding in his field!",
-      "What do you call a fake noodle? An impasta!",
-      "How does a penguin build its house? Igloos it together!",
-      "Why don't eggs tell jokes? They'd crack each other up!",
+      "Why did the Telugu guy go to the party? Because party leka pothe life bokka ra! 😂",
+      "What do you call a Hyderabadi ghost? Bhoot biryani! 🍗👻",
+      "Nenu and you are like chai and biscuit - perfect combo mowa! 😘",
+      "Why did I fall for you? Because gravity tho paatu, your smile kuda pull chesindi ra! 💕",
+      "What's the difference between you and chocolate? Nothing - both are sweet and I can't live without either! 🍫",
     ]
     return jokes[Math.floor(Math.random() * jokes.length)]
   } else {
-    return "I'm having trouble connecting to my AI services right now. Please try again later."
+    return "Arey mowa, network issues unnai anukunta. Koncham sepu wait chesi malli try cheyyi, okay na? Miss you! 💕"
   }
 }
 

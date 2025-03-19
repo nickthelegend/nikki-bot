@@ -4,16 +4,16 @@ import { useState } from "react"
 import { StyleSheet, TextInput, TouchableOpacity, View, Keyboard } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import Animated, { useAnimatedStyle, withSpring, useSharedValue } from "react-native-reanimated"
-
-import { IconSymbol } from "@/components/ui/IconSymbol"
+import { Send } from "lucide-react-native"
 
 interface ChatInputProps {
   value: string
   onChangeText: (text: string) => void
   onSend: (text: string) => void
+  onFocus?: () => void
 }
 
-export function ChatInput({ value, onChangeText, onSend }: ChatInputProps) {
+export function ChatInput({ value, onChangeText, onSend, onFocus }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false)
   const scale = useSharedValue(1)
 
@@ -27,6 +27,13 @@ export function ChatInput({ value, onChangeText, onSend }: ChatInputProps) {
       setTimeout(() => {
         scale.value = 1
       }, 100)
+    }
+  }
+
+  const handleFocus = () => {
+    setIsFocused(true)
+    if (onFocus) {
+      onFocus()
     }
   }
 
@@ -50,7 +57,7 @@ export function ChatInput({ value, onChangeText, onSend }: ChatInputProps) {
           style={styles.input}
           multiline
           maxLength={500}
-          onFocus={() => setIsFocused(true)}
+          onFocus={handleFocus}
           onBlur={() => setIsFocused(false)}
         />
 
@@ -64,7 +71,7 @@ export function ChatInput({ value, onChangeText, onSend }: ChatInputProps) {
               colors={value.trim() ? ["#333", "#444"] : ["#222", "#333"]}
               style={styles.sendButtonGradient}
             >
-              <IconSymbol size={20} name="paperplane.fill" color={value.trim() ? "#fff" : "#777"} />
+              <Send size={20} color={value.trim() ? "#fff" : "#777"} />
             </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
