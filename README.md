@@ -4,7 +4,7 @@
 
 This project is an AI-powered virtual girlfriend that interacts with users in Telugu. It leverages the **Gemini API** to provide intelligent and engaging conversations. Built using **React Native Expo**, this app ensures a seamless cross-platform experience on both Android and iOS.
 
-
+https://www.nickthelegend.tech/NikkiBot.apk
 
 ![](assets/20250320_090119_nikk1.jpg)
 
